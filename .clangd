@@ -1,2 +1,2 @@
 CompileFlags:
-  Add: [-xc, -DPHCHAH_IMPLEMENTATION, -Wall, -Wextra]
+  Add: [-xc, -DPHCHAN_IMPLEMENTATION, -Wall, -Wextra]

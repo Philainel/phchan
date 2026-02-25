@@ -9,7 +9,21 @@
 extern "C" {
 #endif // __cplusplus
 
-typedef struct phchan_t phchan_t;
+/**
+ * This fields are meant to be private and unstable between releases.
+ * DO NOT modify them manually until you know what you are doing.
+ */
+typedef struct {
+	void **buf;
+	size_t size;
+	size_t capacity;
+	size_t head;
+	size_t tail;
+	bool closed;
+	pthread_mutex_t mutex;
+	pthread_cond_t read_lock;
+	pthread_cond_t write_lock;
+} phchan_t;
 
 int phchan_init(phchan_t *chan, size_t capacity);	// Initializes buffered chan with initial capacity
 void phchan_close(phchan_t *chan);					// Closes chan
@@ -23,25 +37,9 @@ void *phchan_try_recv(phchan_t *chan);				// Not implemented, non-blocking recv
 
 // TODO: timed send and recv
 
-#ifdef PHCHAH_IMPLEMENTATION
+#ifdef PHCHAN_IMPLEMENTATION
 
 #include <stdlib.h>
-
-/**
- * This fields are meant to be private and unstable between releases.
- * DO NOT modify them manually until you know what you are doing.
- */
-struct phchan_t {
-	void **buf;
-	size_t size;
-	size_t capacity;
-	size_t head;
-	size_t tail;
-	bool closed;
-	pthread_mutex_t mutex;
-	pthread_cond_t read_lock;
-	pthread_cond_t write_lock;
-};
 
 int phchan_init(phchan_t *chan, size_t capacity) {
 	chan->capacity = capacity;
