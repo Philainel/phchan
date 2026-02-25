@@ -1,3 +1,12 @@
+/*
+ * phchan.h v1.0
+ *
+ * Made by Philainel
+ *
+ * Simple thread-safe buffered channels
+ *
+ */
+
 #ifndef PHCHAN_H
 #define PHCHAN_H
 
