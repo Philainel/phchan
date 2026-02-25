@@ -28,12 +28,13 @@ typedef struct {
 int phchan_init(phchan_t *chan, size_t capacity);	// Initializes buffered chan with initial capacity
 void phchan_close(phchan_t *chan);					// Closes chan
 void phchan_destroy(phchan_t *chan);				// Destroys the chan, must be called after phchan_close() and stopping all reader threads
+bool phchan_is_closed(phchan_t *chan);				// Returns true if given chan is closed
 
 int phchan_send(phchan_t *chan, void *data);		// Sends data to given chan, blocks when internal buffer is full, returns -1 if chan is closed, otherwise 0
 void *phchan_recv(phchan_t *chan);					// Reads and returns data from given chan, if no data available, blocks if chan is opened and returns NULL if chan is closed
 
-int phchan_try_send(phchan_t *chan, void *data);	// Not implemented, non-blocking send
-void *phchan_try_recv(phchan_t *chan);				// Not implemented, non-blocking recv
+int phchan_try_send(phchan_t *chan, void *data);	// Sends data to given chan, returns -1 if chan is closed or internal buffer is full
+void *phchan_try_recv(phchan_t *chan);				// Reads and returns data from given chan, returns NULL if chan is closed or internal buffer is empty
 
 // TODO: timed send and recv
 
@@ -70,6 +71,10 @@ void phchan_destroy(phchan_t *chan) {
 	pthread_cond_destroy(&chan->write_lock);
 }
 
+inline bool phchan_is_closed(phchan_t *chan) {
+	return chan->closed;
+}
+
 int phchan_send(phchan_t *chan, void *data) {
 	pthread_mutex_lock(&chan->mutex);
 	while (chan->size == chan->capacity && !chan->closed) {
@@ -104,10 +109,35 @@ void *phchan_recv(phchan_t *chan) {
 	return result;
 }
 
-int phchan_try_send(phchan_t *chan, void *data) { (void)chan; (void)data; return 0; }
-void *phchan_try_recv(phchan_t *chan) { (void)chan; return NULL; }
+int phchan_try_send(phchan_t *chan, void *data) {
+	pthread_mutex_lock(&chan->mutex);
+	if (chan->closed || chan->size == chan->capacity) {
+		pthread_mutex_unlock(&chan->mutex);
+		return -1;
+	}
+	chan->buf[chan->tail] = data;
+	chan->tail = (chan->tail + 1) % chan->capacity;
+	++chan->size;
+	pthread_cond_signal(&chan->read_lock);
+	pthread_mutex_unlock(&chan->mutex);
+	return 0;
 
-#endif // PHCHAH_IMPLEMENTATION
+}
+
+void *phchan_try_recv(phchan_t *chan) {
+	void *result = NULL;
+	pthread_mutex_lock(&chan->mutex);
+	if (chan->size > 0) {
+		result = chan->buf[chan->head];
+		chan->head = (chan->head + 1) % chan->capacity;
+		--chan->size;
+		pthread_cond_signal(&chan->write_lock);
+	}
+	pthread_mutex_unlock(&chan->mutex);
+	return result;
+}
+
+#endif // PHCHAN_IMPLEMENTATION
 
 #ifdef __cplusplus
 }

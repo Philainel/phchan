@@ -31,9 +31,10 @@ data = phchan_recv(&chan); // 2
 phchan_destroy(&chan) // must be called after phchan_close() call and after all reading threads exit
 ```
 
+For extra description and other functions check phchan.h file
+
 ## Roadmap
 
-- Add non-blocking send/recv
 - Add timed send/recv
 - Add unit tests
 - Add epoll/kqueue variant of channels
